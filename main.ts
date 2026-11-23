@@ -11,7 +11,7 @@
 // Local run:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const botDir = process.env.MAKEFUN_BOT_DIR ?? '/bot';
@@ -20,8 +20,25 @@ const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 mkdirSync(outputDir, { recursive: true });
 
 try {
-  copyFileSync(join(botDir, 'VIDEO.json'), join(outputDir, 'VIDEO.json'));
+  const dest = join(outputDir, 'VIDEO.json');
+  copyFileSync(join(botDir, 'VIDEO.json'), dest);
   console.log(`VIDEO.json copied from ${botDir} to ${outputDir}`);
+
+  // Read the copy back and prove it is usable: it must be valid JSON
+  // carrying a non-empty "url" string, otherwise the gate would find
+  // nothing — fail loudly here instead of handing over a broken entry.
+  let video: { url?: unknown };
+  try {
+    video = JSON.parse(readFileSync(dest, 'utf8'));
+  } catch (parseErr) {
+    console.error(`copied VIDEO.json is not valid JSON: ${(parseErr as Error).message}`);
+    process.exit(1);
+  }
+  if (typeof video.url !== 'string' || video.url.length === 0) {
+    console.error('copied VIDEO.json has no usable "url" field');
+    process.exit(1);
+  }
+  console.log(`entry video: ${video.url}`);
 } catch (err) {
   console.error(`could not copy VIDEO.json: ${(err as Error).message}`);
   process.exit(1);
