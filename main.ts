@@ -39,6 +39,27 @@ try {
     process.exit(1);
   }
   console.log(`entry video: ${video.url}`);
+
+  // The gate counts views on one specific TikTok video, so prove the URL
+  // really points at one: it must live on tiktok.com and carry the numeric
+  // video id in its path. Anything else is a broken entry — fail loudly.
+  let parsed: URL;
+  try {
+    parsed = new URL(video.url);
+  } catch {
+    console.error(`entry video URL is not a valid URL: ${video.url}`);
+    process.exit(1);
+  }
+  if (parsed.hostname !== 'tiktok.com' && !parsed.hostname.endsWith('.tiktok.com')) {
+    console.error(`entry video URL is not on tiktok.com: ${video.url}`);
+    process.exit(1);
+  }
+  const idMatch = parsed.pathname.match(/\/video\/(\d+)/);
+  if (!idMatch) {
+    console.error(`entry video URL has no TikTok video id: ${video.url}`);
+    process.exit(1);
+  }
+  console.log(`video id: ${idMatch[1]}`);
 } catch (err) {
   console.error(`could not copy VIDEO.json: ${(err as Error).message}`);
   process.exit(1);
